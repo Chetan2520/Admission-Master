@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Target
 } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
@@ -31,13 +31,13 @@ export default function AddExamPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!formData.name || !formData.authority || !formData.examDate) {
       toast.error("Please fill in all required fields");
       return;
