@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --font-outfit: var(--font-outfit);
+  --font-inter: var(--font-inter);
+  
+  /* Brand Color Scale: #14b5a4 */
+  --color-blue-50: #e8f8f6;
+  --color-blue-100: #d1f1ed;
+  --color-blue-200: #a3e3db;
+  --color-blue-300: #75d5c9;
+  --color-blue-400: #47c7b7;
+  --color-blue-500: #19b9a9;
+  --color-blue-600: #14b5a4;
+  --color-blue-700: #109183;
+  --color-blue-800: #0c6d62;
+  --color-blue-900: #084941;
+  --color-blue-950: #042421;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --skill-sky: #87CEEB;
+  --skill-blue: #00A3FF;
+  --skill-glass: rgba(255, 255, 255, 0.12);
+  --skill-border: rgba(255, 255, 255, 0.3);
+}
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 antialiased overflow-x-hidden;
+  }
+}
+
+@layer utilities {
+  .skill-hero-bg {
+    background: radial-gradient(circle at 70% 50%, #ffffff 0%, #7CD2FF 40%, #0085FF 100%);
+  }
+
+  .grid-texture {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+
+  .premium-glass {
+    @apply bg-white/10 backdrop-blur-[40px] border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)];
+  }
+
+  .glass-stroke {
+    @apply border border-white/50;
+  }
+
+  .text-heading {
+    @apply font-black text-black uppercase tracking-[-0.05em] leading-[0.95];
+  }
+
+  .frosted-blob {
+    @apply absolute rounded-full bg-white/10 backdrop-blur-[120px] border border-white/10;
+  }
+  .grid-bg {
+    background-image: 
+      linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+      linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
