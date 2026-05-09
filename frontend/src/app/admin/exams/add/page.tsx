@@ -5,12 +5,7 @@ import {
   Save, 
   Award,
   Calendar,
-  Monitor,
-  PenTool,
-  Clock,
-  Info,
-  ShieldCheck,
-  Target
+  Clock
 } from "lucide-react";
 import React, { useState } from "react";
 import Link from "next/link";

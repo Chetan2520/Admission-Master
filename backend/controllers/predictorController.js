@@ -6,29 +6,35 @@ const Cutoff = require('../models/Cutoff');
  * @access  Public (or Private after login)
  */
 const predictColleges = async (req, res) => {
-  const { exam, rank, category, page = 1, limit = 20 } = req.query;
+  const { exam, rank, category, type, state, page = 1, limit = 10 } = req.query;
 
-  // Basic validation for required search parameters
   if (!exam || !rank || !category) {
     res.status(400);
     throw new Error('Missing required parameters: exam, rank, or category');
   }
 
   try {
-    // Define query logic: closing rank must be greater than or equal to user's rank
     const query = {
       exam: exam,
       category: category,
       closingRank: { $gte: parseInt(rank) }
     };
 
-    // Calculate total results for pagination metadata
+    // If type or state filters are provided, find matching colleges first
+    if (type || state) {
+      const collegeQuery = {};
+      if (type) collegeQuery.type = type;
+      if (state) collegeQuery.state = state;
+      
+      const matchingColleges = await require('../models/College').find(collegeQuery).select('_id');
+      const collegeIds = matchingColleges.map(c => c._id);
+      query.collegeId = { $in: collegeIds };
+    }
+
     const total = await Cutoff.countDocuments(query);
-    
-    // Execute optimized query with pagination and population
     const results = await Cutoff.find(query)
       .populate('collegeId')
-      .sort({ closingRank: 1 }) // Show most relevant (closest rank) first
+      .sort({ closingRank: 1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 

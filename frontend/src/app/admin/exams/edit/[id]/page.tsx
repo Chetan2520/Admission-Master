@@ -5,15 +5,9 @@ import {
   Save, 
   Award,
   Calendar,
-  Monitor,
-  PenTool,
-  Clock,
-  Info,
-  ShieldCheck,
-  Target,
   RotateCcw
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { toast, Toaster } from "react-hot-toast";
@@ -34,16 +28,18 @@ export default function EditExamPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
   useEffect(() => {
-    if (params.id) {
+    if (id) {
       fetchExamDetails();
     }
-  }, [params.id]);
+  }, [id]);
 
   const fetchExamDetails = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams/${params.id}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams/${id}`);
       const result = await response.json();
       if (result.success) {
         const data = result.data;
@@ -72,16 +68,22 @@ export default function EditExamPage() {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!formData.name || !formData.authority || !formData.examDate) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams/${params.id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
@@ -125,7 +127,7 @@ export default function EditExamPage() {
             <div className="flex items-center gap-3 mb-1">
                <h1 className="text-3xl font-bold text-slate-900">Edit Exam Record</h1>
                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200">
-                  {params.id}
+                  {id}
                </span>
             </div>
             <p className="text-slate-500 font-medium text-sm">Update the scheduling and pattern for {formData.name}</p>
@@ -137,7 +139,7 @@ export default function EditExamPage() {
                 disabled={isSubmitting}
                 className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-teal-600/10 disabled:opacity-50"
              >
-               <RotateCcw className="w-4 h-4" /> {isSubmitting ? "Updating..." : "Update Record"}
+               <Save className="w-4 h-4" /> {isSubmitting ? "Updating..." : "Update Record"}
              </button>
           </div>
         </div>

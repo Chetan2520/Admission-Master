@@ -57,6 +57,7 @@ const uploadColleges = async (req, res) => {
         shortName,
         type,
         nirfRank,
+        averageCourseFees: item.fees || item["Fees"] || item["Average Fees"],
         entranceExams:
           typeof item.entranceExams === "string"
             ? item.entranceExams.split(",").map((s) => s.trim())
@@ -118,19 +119,26 @@ const uploadCutoffs = async (req, res) => {
       const row = data[i];
       const rowNum = i + 2;
 
-      // Identify College
-      const collegeIdentifier =
-        row.collegeShortName ||
-        row["College Short Name"] ||
-        row.shortName ||
-        row["Short Name"] ||
-        row.college ||
-        row["College Name"];
+      // Extract Fields with robust normalization (remove spaces, lowercase, special chars)
+      const getVal = (keys) => {
+        if (!row) return null;
+        const normalize = (s) => s ? s.toString().toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+        const normalizedKeys = keys.map(normalize);
+        
+        const foundKey = Object.keys(row).find(k => 
+          normalizedKeys.includes(normalize(k))
+        );
+        return foundKey ? row[foundKey] : null;
+      };
+
+      // Identify College using robust getVal helper
+      const collegeIdentifier = getVal(["college", "collegename", "shortname", "collegeshortname"]);
 
       if (!collegeIdentifier) {
+        console.log(`Row ${rowNum} Error: Missing College Identifier in headers:`, Object.keys(row));
         errorRows.push({
           row: rowNum,
-          error: "Missing College Identifier (Short Name or Name)",
+          error: "Missing College Name or Short Name in Excel columns.",
         });
         continue;
       }
@@ -158,26 +166,50 @@ const uploadCutoffs = async (req, res) => {
       }
 
       if (!collegeId) {
+        const available = await College.find({}).limit(3).select('shortName name');
+        const examples = available.map(c => c.shortName || c.name).join(", ");
+        
         console.log(`College Match Failed: ${collegeIdentifier}`);
         errorRows.push({
           row: rowNum,
-          error: `College "${collegeIdentifier}" not found in database.`,
+          error: `College "${collegeIdentifier}" not found. Did you mean: ${examples}...? Check 'Manage Colleges' for exact names.`,
         });
         continue;
       }
 
-      // Extract Fields with multi-variation support
-      const exam = row.exam || row["Exam"] || row["Entrance Exam"];
-      const year = row.year || row["Year"] || new Date().getFullYear();
-      const round = row.round || row["Round"] || "1";
-      const course = row.course || row["Course"];
-      const branch = row.branch || row["Branch"] || row["Stream"] || "General";
-      const category = row.category || row["Category"];
-      const quota = row.quota || row["Quota"] || "AIQ";
-      const openingRank =
-        row.openingRank || row["Opening Rank"] || row["Opening"];
-      const closingRank =
-        row.closingRank || row["Closing Rank"] || row["Closing"];
+
+      const exam = getVal(["exam", "entranceexam", "examname", "entrance"]);
+      const year = getVal(["year", "academicyear", "session"]) || new Date().getFullYear();
+      const round = getVal(["round", "counselinground", "cround"]) || "1";
+      const course = getVal(["course", "coursename", "degree", "program"]);
+      const branch = getVal(["branch", "stream", "specialization", "discipline"]) || "General";
+      const category = getVal(["category", "caste", "reservation", "cat"]);
+      const quota = getVal(["quota", "type", "seatquota"]) || "AIQ";
+      let openingRank = getVal(["openingrank", "opening", "or", "startrank", "rankfrom"]);
+      let closingRank = getVal(["closingrank", "closing", "cr", "endrank", "rankto"]);
+      
+      // Support for a single "Ranks" column (e.g., "100-500" or "100 / 500")
+      if ((openingRank === null || closingRank === null)) {
+        const combinedRanks = getVal(["ranks", "rank", "cutoff", "cutoffs"]);
+        if (combinedRanks && combinedRanks.toString().includes("-")) {
+          const parts = combinedRanks.toString().split("-");
+          openingRank = parts[0].trim();
+          closingRank = parts[1].trim();
+        } else if (combinedRanks && combinedRanks.toString().includes("/")) {
+          const parts = combinedRanks.toString().split("/");
+          openingRank = parts[0].trim();
+          closingRank = parts[1].trim();
+        } else if (combinedRanks && combinedRanks.toString().trim().includes(" ")) {
+          const parts = combinedRanks.toString().trim().split(/\s+/);
+          openingRank = parts[0];
+          closingRank = parts[1] || parts[0];
+        } else if (combinedRanks) {
+          openingRank = combinedRanks;
+          closingRank = combinedRanks;
+        }
+      }
+
+      const seats = getVal(["seats", "seatcount", "intake", "totalinteke"]) || 0;
 
       // Validation
       if (
@@ -205,24 +237,34 @@ const uploadCutoffs = async (req, res) => {
         quota,
         openingRank: parseInt(openingRank),
         closingRank: parseInt(closingRank),
+        seats: parseInt(seats),
       });
       processedCount++;
     }
 
+    let savedCount = 0;
     if (cutoffsToInsert.length > 0) {
-      // Use ordered: false to continue inserting even if some fail (e.g. validation)
-      await Cutoff.insertMany(cutoffsToInsert, { ordered: false });
+      const result = await Cutoff.insertMany(cutoffsToInsert, { ordered: false });
+      savedCount = result.length;
+      console.log(`Bulk Insert Success: ${savedCount} records saved.`);
     }
 
     res.status(200).json({
       success: true,
-      count: processedCount,
+      count: savedCount,
+      totalProcessed: processedCount,
       errors: errorRows.length > 0 ? errorRows : null,
-      message: `Successfully processed ${processedCount} cutoff records.`,
+      message: savedCount > 0 
+        ? `Successfully uploaded ${savedCount} records.` 
+        : `No records were uploaded. Check errors for details.`,
     });
   } catch (error) {
-    res.status(500);
-    throw new Error(`Upload failed: ${error.message}`);
+    console.error("Bulk Upload Error:", error);
+    res.status(500).json({
+      success: false,
+      message: `Upload failed: ${error.message}`,
+      errors: error.writeErrors ? error.writeErrors.map(e => ({ row: 'Unknown', error: e.errmsg })) : [error.message]
+    });
   }
 };
 
@@ -289,11 +331,37 @@ const getColleges = async (req, res) => {
     const colleges = await College.find(query)
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .sort({ nirfRank: 1, createdAt: -1 });
+      .sort({ nirfRank: 1, createdAt: -1 })
+      .lean(); // Use lean for performance since we'll modify the objects
+
+    // Fetch all cutoffs for these colleges
+    const collegeIds = colleges.map(c => c._id);
+    const allCutoffs = await Cutoff.find({ collegeId: { $in: collegeIds } }).lean();
+
+    // Map cutoffs to colleges
+    const collegesWithCutoffs = colleges.map(college => {
+      if (college.courses) {
+        college.courses = college.courses.map(course => {
+          if (course.branches) {
+            course.branches = course.branches.map(branch => {
+              // Find cutoffs matching this college, course name and branch name
+              const branchCutoffs = allCutoffs.filter(cut => 
+                cut.collegeId.toString() === college._id.toString() &&
+                cut.course.toLowerCase() === course.name.toLowerCase() &&
+                cut.branch.toLowerCase() === branch.name.toLowerCase()
+              );
+              return { ...branch, cutoffs: branchCutoffs };
+            });
+          }
+          return course;
+        });
+      }
+      return college;
+    });
 
     res.status(200).json({
       success: true,
-      data: colleges,
+      data: collegesWithCutoffs,
       pagination: {
         total,
         page: parseInt(page),
@@ -319,6 +387,26 @@ const createCutoff = async (req, res) => {
   } catch (error) {
     res.status(400);
     throw new Error(`Failed to create cutoff: ${error.message}`);
+  }
+};
+
+/**
+ * @desc    Create multiple cutoff entries (Bulk)
+ * @route   POST /api/admin/cutoffs/bulk
+ * @access  Private/Admin
+ */
+const createBulkCutoffs = async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ success: false, message: "Invalid data format" });
+    }
+
+    const cutoffs = await Cutoff.insertMany(items);
+    res.status(201).json({ success: true, count: cutoffs.length, data: cutoffs });
+  } catch (error) {
+    res.status(400);
+    throw new Error(`Failed to create bulk cutoffs: ${error.message}`);
   }
 };
 
@@ -398,68 +486,80 @@ const uploadCourses = async (req, res) => {
     let updatedCount = 0;
     let errors = [];
 
+    // Grouping rows by college to minimize database saves
+    const collegeUpdates = new Map();
+
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const collegeIdentifier =
-        row.name || row["College Name"] || row.shortName || row["Short Name"];
-      const coursesStr = row.courses || row["Courses"];
-
-      if (!collegeIdentifier || !coursesStr) {
-        errors.push(`Row ${i + 2}: Missing college name or courses`);
+      const collegeIdentifier = row.name || row["College Name"] || row.shortName || row["Short Name"] || row.college;
+      const courseName = row.course || row["Course"] || row["Course Name"];
+      const branchName = row.branch || row["Branch"] || "General";
+      
+      if (!collegeIdentifier || !courseName) {
+        errors.push(`Row ${i + 2}: Missing college name or course name`);
         continue;
       }
 
-      // Find college by name or short name
-      const college = await College.findOne({
-        $or: [
-          { name: new RegExp(`^${collegeIdentifier}$`, "i") },
-          { shortName: new RegExp(`^${collegeIdentifier}$`, "i") },
-        ],
-      });
-
-      if (!college) {
-        errors.push(`Row ${i + 2}: College "${collegeIdentifier}" not found`);
-        continue;
+      // Initialize college data in our update map
+      const cid = collegeIdentifier.toString().toLowerCase().trim();
+      if (!collegeUpdates.has(cid)) {
+        const college = await College.findOne({
+          $or: [
+            { name: new RegExp(`^${collegeIdentifier}$`, "i") },
+            { shortName: new RegExp(`^${collegeIdentifier}$`, "i") },
+          ],
+        });
+        
+        if (!college) {
+          errors.push(`Row ${i + 2}: College "${collegeIdentifier}" not found`);
+          continue;
+        }
+        collegeUpdates.set(cid, college);
       }
 
-      // Parse courses (comma separated)
-      const courseNames = coursesStr
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s !== "");
-
-      // Map to the object structure expected by the schema
-      const newCourses = courseNames.map((name) => ({
-        name,
-        duration: row.duration || row["Duration"] || "4 Years",
-        fees: row.fees || row["Fees"] || "N/A",
-      }));
-
-      // Update college - we'll add new courses and avoid duplicates by name if possible
-      // For simplicity, we'll just overwrite or append. Let's append but check for duplicates.
-      const existingCourseNames = college.courses.map((c) =>
-        c.name.toLowerCase(),
-      );
-      const coursesToAdd = newCourses.filter(
-        (nc) => !existingCourseNames.includes(nc.name.toLowerCase()),
-      );
-
-      if (coursesToAdd.length > 0) {
-        college.courses.push(...coursesToAdd);
-        await college.save();
-        updatedCount++;
+      const college = collegeUpdates.get(cid);
+      
+      // Find or Create Course
+      let course = college.courses.find(c => c.name.toLowerCase() === courseName.toLowerCase());
+      if (!course) {
+        course = { name: courseName, branches: [] };
+        college.courses.push(course);
       }
+
+      // Find or Create Branch within Course
+      let branch = course.branches.find(b => b.name.toLowerCase() === branchName.toLowerCase());
+      if (branch) {
+        // Update existing branch details
+        branch.duration = row.duration || row["Duration"] || branch.duration || "4 Years";
+        branch.fees = row.fees || row["Fees"] || row["Average Fees"] || branch.fees || "N/A";
+      } else {
+        // Add new branch
+        course.branches.push({
+          name: branchName,
+          duration: row.duration || row["Duration"] || "4 Years",
+          fees: row.fees || row["Fees"] || row["Average Fees"] || "N/A"
+        });
+      }
+      updatedCount++;
+    }
+
+    // Save all modified colleges
+    for (const college of collegeUpdates.values()) {
+      await college.save();
     }
 
     res.status(200).json({
       success: true,
       updatedCount,
       errors: errors.length > 0 ? errors : null,
-      message: `${updatedCount} colleges updated with new courses.`,
+      message: `Processed ${updatedCount} course/branch records across ${collegeUpdates.size} colleges.`,
     });
   } catch (error) {
-    res.status(500);
-    throw new Error(`Upload failed: ${error.message}`);
+    console.error("Course Upload Error:", error);
+    res.status(500).json({
+      success: false,
+      message: `Upload failed: ${error.message}`
+    });
   }
 };
 
@@ -493,25 +593,74 @@ const exportColleges = async (req, res) => {
   try {
     const colleges = await College.find({}).lean();
 
-    // Map data to a flat structure for Excel
-    const data = colleges.map((c) => ({
-      Name: c.name,
-      "Short Name": c.shortName || "",
-      Location: c.location,
-      State: c.state,
-      Type: c.type,
-      Rating: c.rating,
-      "NIRF Rank": c.nirfRank || "",
-      Website: c.website || "",
-      "Affiliated With": c.affiliatedWith || "",
-      "Entrance Exams": c.entranceExams ? c.entranceExams.join(", ") : "",
-      Courses: c.courses
-        ? c.courses.map((course) => course.name).join(", ")
-        : "",
-    }));
+      // Map data to a flat structure for Excel - now including branches
+      const flatData = [];
+      colleges.forEach(c => {
+        if (!c.courses || c.courses.length === 0) {
+          flatData.push({
+            Name: c.name,
+            "Short Name": c.shortName || "",
+            Location: c.location,
+            State: c.state,
+            Type: c.type,
+            Rating: c.rating,
+            "NIRF Rank": c.nirfRank || "",
+            Website: c.website || "",
+            "Affiliated With": c.affiliatedWith || "",
+            "Entrance Exams": c.entranceExams ? c.entranceExams.join(", ") : "",
+            "Average Fees": c.averageCourseFees || "",
+            Course: "N/A",
+            Branch: "N/A",
+            Duration: "N/A",
+            Fees: "N/A"
+          });
+        } else {
+          c.courses.forEach(course => {
+            if (!course.branches || course.branches.length === 0) {
+              flatData.push({
+                Name: c.name,
+                "Short Name": c.shortName || "",
+                Location: c.location,
+                State: c.state,
+                Type: c.type,
+                Rating: c.rating,
+                "NIRF Rank": c.nirfRank || "",
+                Website: c.website || "",
+                "Affiliated With": c.affiliatedWith || "",
+                "Entrance Exams": c.entranceExams ? c.entranceExams.join(", ") : "",
+                "Average Fees": c.averageCourseFees || "",
+                Course: course.name,
+                Branch: "N/A",
+                Duration: "N/A",
+                Fees: "N/A"
+              });
+            } else {
+              course.branches.forEach(branch => {
+                flatData.push({
+                  Name: c.name,
+                  "Short Name": c.shortName || "",
+                  Location: c.location,
+                  State: c.state,
+                  Type: c.type,
+                  Rating: c.rating,
+                  "NIRF Rank": c.nirfRank || "",
+                  Website: c.website || "",
+                  "Affiliated With": c.affiliatedWith || "",
+                  "Entrance Exams": c.entranceExams ? c.entranceExams.join(", ") : "",
+                  "Average Fees": c.averageCourseFees || "",
+                  Course: course.name,
+                  Branch: branch.name,
+                  Duration: branch.duration,
+                  Fees: branch.fees
+                });
+              });
+            }
+          });
+        }
+      });
 
-    const workbook = xlsx.utils.book_new();
-    const worksheet = xlsx.utils.json_to_sheet(data);
+      const workbook = xlsx.utils.book_new();
+      const worksheet = xlsx.utils.json_to_sheet(flatData);
     xlsx.utils.book_append_sheet(workbook, worksheet, "Colleges");
 
     const buffer = xlsx.write(workbook, { type: "buffer", bookType: "xlsx" });
@@ -531,14 +680,87 @@ const exportColleges = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete all colleges
+ * @route   DELETE /api/admin/colleges/delete-all
+ * @access  Private/Admin
+ */
+const deleteAllColleges = async (req, res) => {
+  try {
+    const result = await College.deleteMany({});
+    res.status(200).json({ success: true, message: `All ${result.deletedCount} colleges deleted.` });
+  } catch (error) {
+    res.status(500);
+    throw new Error(`Delete failed: ${error.message}`);
+  }
+};
+
+/**
+ * @desc    Delete all cutoffs
+ * @route   DELETE /api/admin/cutoffs/delete-all
+ * @access  Private/Admin
+ */
+const deleteAllCutoffs = async (req, res) => {
+  try {
+    const result = await Cutoff.deleteMany({});
+    res.status(200).json({ success: true, message: `All ${result.deletedCount} cutoff records deleted.` });
+  } catch (error) {
+    res.status(500);
+    throw new Error(`Delete failed: ${error.message}`);
+  }
+};
+
+/**
+ * @desc    Get a single college with all its cutoffs and details (A to Z)
+ * @route   GET /api/admin/colleges/:id/full-details
+ * @access  Private/Admin
+ */
+const getCollegeFullDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Fetch College Basic Info
+    const college = await College.findById(id);
+    if (!college) {
+      return res.status(404).json({ success: false, message: "College not found" });
+    }
+
+    // 2. Fetch all Cutoffs for this college
+    const cutoffs = await Cutoff.find({ collegeId: id }).sort({ year: -1, round: 1 });
+
+    // 3. Optional: Group cutoffs by course for cleaner UI consumption
+    const courseMatrix = {};
+    cutoffs.forEach(c => {
+      if (!courseMatrix[c.course]) courseMatrix[c.course] = [];
+      courseMatrix[c.course].push(c);
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        college,
+        cutoffs, // Flat list
+        courseMatrix, // Grouped by course name
+      }
+    });
+  } catch (error) {
+    res.status(500);
+    throw new Error(`Fetch Full Details Error: ${error.message}`);
+  }
+};
+
 module.exports = {
   uploadColleges,
   uploadCutoffs,
   createCollege,
   getColleges,
   createCutoff,
+  createBulkCutoffs,
   getCutoffs,
   uploadCourses,
   updateCollege,
   exportColleges,
+  deleteAllColleges,
+  deleteAllCutoffs,
+  getCollegeFullDetails,
 };

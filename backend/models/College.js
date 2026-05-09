@@ -14,7 +14,7 @@ const collegeSchema = new mongoose.Schema({
   rating: { type: Number, default: 0 },
   nirfRank: { type: Number },
   seats: { type: Number, default: 0 },
-  fees: { type: String },
+  averageCourseFees: { type: String },
   website: { type: String },
   description: { type: String },
   logo: { type: String },
@@ -23,8 +23,11 @@ const collegeSchema = new mongoose.Schema({
   images: [String],
   courses: [{
     name: String,
-    duration: String,
-    fees: String
+    branches: [{
+      name: String,  
+      duration: String,
+      fees: String
+    }]
   }]
 }, { timestamps: true });
 

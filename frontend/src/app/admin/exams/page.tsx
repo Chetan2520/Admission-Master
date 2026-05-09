@@ -2,32 +2,34 @@
 
 import { 
   Search, 
-  Filter, 
   Plus, 
-  BookOpen, 
-  FileEdit, 
   Calendar, 
   Award,
   Edit,
   Trash2,
-  ChevronRight,
-  Monitor,
-  PenTool,
   Clock,
-  Layout
+  AlertTriangle
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast, Toaster } from "react-hot-toast";
 
+interface Exam {
+  _id: string;
+  name: string;
+  authority: string;
+  description?: string;
+  mode: string;
+  totalMarks: string;
+  examDate: string;
+  expectedResultDate?: string;
+  status: 'Upcoming' | 'Ongoing' | 'Completed' | 'Postponed';
+}
+
 export default function ManageExamsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [exams, setExams] = useState([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchExams();
-  }, []);
 
   const fetchExams = async () => {
     try {
@@ -35,9 +37,8 @@ export default function ManageExamsPage() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams`);
       const result = await response.json();
       if (result.success) {
-        setExams(result.data.map(data => {
+        setExams((result.data || []).map((data: any) => {
           if (data.examDate) data.examDate = data.examDate.split('T')[0];
-          if (data.resultDate) data.resultDate = data.resultDate.split('T')[0];
           if (data.expectedResultDate) data.expectedResultDate = data.expectedResultDate.split('T')[0];
           return data;
         }));
@@ -52,7 +53,11 @@ export default function ManageExamsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this exam?")) return;
 
     try {
@@ -72,9 +77,33 @@ export default function ManageExamsPage() {
     }
   };
 
-  const filteredExams = exams.filter(e => 
-    e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.authority.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleDeleteAll = async () => {
+    if (!window.confirm("CRITICAL WARNING: This will permanently delete ALL entrance exams. This action cannot be undone. Are you absolutely sure?")) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/exams/bulk/delete-all`, {
+        method: "DELETE"
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message);
+        fetchExams();
+      } else {
+        toast.error(json.message || "Failed to delete exams");
+      }
+    } catch (err) {
+      toast.error("An error occurred during deletion");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredExams = (exams || []).filter(e => 
+    (e.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (e.authority || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -87,6 +116,12 @@ export default function ManageExamsPage() {
           <p className="text-slate-500 font-medium text-sm">Schedule and manage national & state level entrance examinations</p>
         </div>
         <div className="flex gap-3">
+           <button 
+             onClick={handleDeleteAll}
+             className="px-4 py-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-rose-100 transition-all active:scale-95 shadow-sm"
+           >
+             <AlertTriangle className="w-4 h-4" /> Delete All
+           </button>
            <Link href="/admin/exams/add">
              <button className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-teal-600/10">
                <Plus className="w-4 h-4" /> Add New Exam
@@ -161,7 +196,7 @@ export default function ManageExamsPage() {
                   </td>
                 </tr>
               ) : filteredExams.length > 0 ? (
-                filteredExams.map((exam, i) => (
+                filteredExams.map((exam) => (
                   <tr key={exam._id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
                        <span className="font-bold text-slate-900 block">{exam.name}</span>

@@ -82,10 +82,25 @@ const deleteExam = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Delete all exams
+ * @route   DELETE /api/admin/exams/delete-all
+ * @access  Private/Admin
+ */
+const deleteAllExams = async (req, res) => {
+  try {
+    const result = await Exam.deleteMany({});
+    res.status(200).json({ success: true, message: `All ${result.deletedCount} exams deleted.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getExams,
   getExamById,
   createExam,
   updateExam,
-  deleteExam
+  deleteExam,
+  deleteAllExams
 };

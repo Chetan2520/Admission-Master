@@ -16,6 +16,7 @@ const cutoffSchema = new mongoose.Schema({
   quota: { type: String, required: true },
   openingRank: { type: Number, required: true },
   closingRank: { type: Number, required: true, index: true },
+  seats: { type: Number, default: 0 },
   status: { type: String, enum: ['Published', 'Draft'], default: 'Published' }
 }, { timestamps: true });
 

@@ -17,9 +17,11 @@ import {
   UploadCloud,
   Download,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast, Toaster } from "react-hot-toast";
 
 export default function ManageCollegesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,40 +43,40 @@ export default function ManageCollegesPage() {
     minRating: "",
   });
 
+  const fetchColleges = async () => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        page: currentPage.toString(),
+        limit: "10",
+        ...filters,
+      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/colleges?${queryParams}`,
+      );
+      const json = await res.json();
+      if (json.success) {
+        setColleges(json.data);
+        setTotalPages(json.pagination.pages);
+        setTotalCount(json.pagination.total);
+      }
+    } catch (err) {
+      console.error("Failed to fetch colleges", err);
+      setError(
+        "Could not connect to the server. Please ensure the backend is running.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Reset to page 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filters]);
 
   useEffect(() => {
-    const fetchColleges = async () => {
-      try {
-        setLoading(true);
-        const queryParams = new URLSearchParams({
-          search: searchTerm,
-          page: currentPage.toString(),
-          limit: "10",
-          ...filters,
-        });
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/admin/colleges?${queryParams}`,
-        );
-        const json = await res.json();
-        if (json.success) {
-          setColleges(json.data);
-          setTotalPages(json.pagination.pages);
-          setTotalCount(json.pagination.total);
-        }
-      } catch (err) {
-        console.error("Failed to fetch colleges", err);
-        setError(
-          "Could not connect to the server. Please ensure the backend is running.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const delayDebounce = setTimeout(() => {
       fetchColleges();
     }, 500);
@@ -102,14 +104,14 @@ export default function ManageCollegesPage() {
       );
       const data = await response.json();
       if (data.success) {
-        alert(`${data.count} colleges uploaded successfully!`);
+        toast.success(`${data.count} colleges uploaded successfully!`);
         window.location.reload();
       } else {
-        alert(data.message || "Upload failed");
+        toast.error(data.message || "Upload failed");
       }
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Upload failed. Please try again.");
+      toast.error("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -119,11 +121,36 @@ export default function ManageCollegesPage() {
     window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/admin/export-colleges`;
   };
 
+  const handleDeleteAll = async () => {
+    if (!window.confirm("CRITICAL WARNING: This will permanently delete ALL colleges from the database. This action cannot be undone. Are you absolutely sure?")) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/colleges/bulk/delete-all`, {
+        method: "DELETE"
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message);
+        fetchColleges();
+      } else {
+        toast.error(json.message || "Failed to delete colleges");
+      }
+    } catch (err) {
+      toast.error("An error occurred during deletion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className="max-w-none space-y-6 pb-10 px-4 font-inter"
       suppressHydrationWarning
     >
+      <Toaster position="top-right" />
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -134,7 +161,13 @@ export default function ManageCollegesPage() {
             View and manage the comprehensive university database
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <button 
+            onClick={handleDeleteAll}
+            className="px-4 py-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-rose-100 transition-all active:scale-95 shadow-sm"
+          >
+            <AlertTriangle className="w-4 h-4" /> Delete All
+          </button>
           <button 
             onClick={handleExportColleges}
             className="px-4 py-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
@@ -145,7 +178,7 @@ export default function ManageCollegesPage() {
             className={`cursor-pointer bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
           >
             <UploadCloud className="w-4 h-4" />
-            {isUploading ? "Uploading..." : "Bulk Upload (Excel/CSV)"}
+            {isUploading ? "Uploading..." : "Bulk Upload"}
             <input
               type="file"
               className="hidden"
@@ -379,6 +412,9 @@ export default function ManageCollegesPage() {
                 <th className="px-4 py-4 font-bold uppercase text-[10px] tracking-wider text-slate-800">
                   NIRF
                 </th>
+                <th className="px-4 py-4 font-bold uppercase text-[10px] tracking-wider text-slate-800">
+                  Avg Fees
+                </th>
                 <th className="px-4 py-4 font-bold uppercase text-[10px] tracking-wider text-slate-800 text-right">
                   Actions
                 </th>
@@ -505,6 +541,11 @@ export default function ManageCollegesPage() {
                         <Trophy className="w-3 h-3 text-amber-500" /> #
                         {college.nirfRank || "—"}
                       </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="text-xs font-bold text-slate-700">
+                        {college.averageCourseFees || "—"}
+                      </span>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-2">

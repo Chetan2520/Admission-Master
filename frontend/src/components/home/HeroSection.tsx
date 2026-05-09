@@ -64,85 +64,22 @@ export default function HeroSection() {
           <p className="text-lg md:text-xl text-gray-200 mt-4 max-w-2xl font-medium">
             India's most accurate college predictor for NEET, JEE & CUET.
           </p>
-        </div>
-      </div>
-
-      {/* Floating Predictor Bar (RedBus Style - Overlapping) */}
-      <div className="relative z-30 -mt-12 px-6 max-w-7xl mx-auto">
-        <div className="bg-white p-2 rounded-xl shadow-md border border-gray-100">
-          <div className="flex flex-col md:flex-row items-center">
-            
-            {/* Exam Select */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Select Exam</label>
-              <select 
-                value={exam}
-                onChange={(e) => setExam(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-              >
-                <option>NEET UG</option>
-                <option>JEE Main</option>
-                <option>CUET</option>
-              </select>
-            </div>
-
-            {/* Rank Input */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Your Rank</label>
-              <input 
-                type="number" 
-                placeholder="Enter AIR Rank" 
-                value={rank}
-                onChange={(e) => setRank(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-              />
-            </div>
-
-            {/* Category Select */}
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Category</label>
-              <select 
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-              >
-                <option>General</option>
-                <option>OBC</option>
-                <option>SC</option>
-                <option>ST</option>
-                <option>EWS</option>
-              </select>
-            </div>
-
-            {/* Action Button */}
-            <button 
-              onClick={handlePredict}
-              disabled={isLoading}
-              className="w-full md:w-auto h-[52px] px-10 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  Check Colleges
-                  <ChevronRight size={18} />
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Trust Labels */}
-          {/* <div className="flex flex-wrap items-center justify-center gap-8 py-3 border-t border-gray-50 mt-1">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <div className="w-1 h-1 bg-blue-600 rounded-full" /> No registration required
-            </span>
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <div className="w-1 h-1 bg-blue-600 rounded-full" /> Completely free
-            </span>
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-              <div className="w-1 h-1 bg-blue-600 rounded-full" /> Instant results
-            </span>
-          </div> */}
+          
+         <div className="flex gap-5">
+           <button 
+            onClick={() => router.push('/predictor')}
+            className="mt-10 px-8 py-4 bg-white text-slate-900 rounded-xl font-bold text-lg hover:bg-slate-100 cursor-pointer transition-all shadow-2xl flex items-center gap-2 active:scale-95 group"
+          >
+            Predict Your College
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button><button 
+            onClick={() => router.push('/colleges')}
+            className="mt-10 px-8 py-4 border border-2 text-white  border-white text-slate-900 rounded-xl font-bold text-lg  cursor-pointer transition-all shadow-2xl flex items-center gap-2 active:scale-95 group"
+          >
+            Find Your College
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </button>
+         </div>
         </div>
       </div>
     </section>

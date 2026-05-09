@@ -34,7 +34,7 @@ export default function AddCollegePage() {
     type: "Govt",
     rating: 0,
     seats: 0,
-    fees: "",
+    averageCourseFees: "",
     website: "",
     description: "",
     nirfRank: "",
@@ -255,6 +255,19 @@ export default function AddCollegePage() {
                                 suppressHydrationWarning
                               />
                            </div>
+                           <div className="space-y-2">
+                              <label className="text-xs font-bold text-slate-700 block">Average Course Fees</label>
+                              <input 
+                                name="averageCourseFees"
+                                value={formData.averageCourseFees}
+                                onChange={handleInputChange}
+                                type="text" 
+                                placeholder="e.g. 1.5 Lakh/Year" 
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" 
+                              />
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
                            <div className="space-y-2">
                               <label className="text-xs font-bold text-slate-700 block">Website URL</label>
                               <div className="relative">
