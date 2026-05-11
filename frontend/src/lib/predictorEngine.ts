@@ -10,6 +10,7 @@ export type College = {
   seats: number;
   averageCourseFees: string;
   logo: string;
+  images: string[];
   affiliatedWith: string;
   entranceExams: string[];
   courses: {
@@ -58,6 +59,7 @@ export const calculateProbability = (
     if (userRank <= closing) {
       // Linear interpolation from 98% to 60%
       const range = closing - opening;
+      if (range === 0) return userRank <= closing ? 95 : 40;
       const position = userRank - opening;
       const factor = 1 - (position / range);
       const score = 60 + (factor * 38);

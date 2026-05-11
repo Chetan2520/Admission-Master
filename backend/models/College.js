@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+  
 /**
  * College Model
  * Stores comprehensive information about educational institutions.

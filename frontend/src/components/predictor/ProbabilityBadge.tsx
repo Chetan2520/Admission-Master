@@ -4,16 +4,13 @@ import { getProbabilityLabel } from "@/lib/predictorEngine";
 export default function ProbabilityBadge({ score }: { score: number }) {
   const { label, color } = getProbabilityLabel(score);
 
-  // Map utility colors to sharper ones if needed, but color is passed from engine.
-  // Assuming color contains classes like 'bg-green-600'
-
   return (
-    <div className="flex flex-col items-center md:items-end gap-1">
-      <div className={`px-2 py-0.5 border text-white text-[10px] font-bold uppercase tracking-widest ${color}`}>
+    <div className="flex flex-col items-center md:items-end gap-2">
+      <div className={`px-4 py-1.5 rounded-lg text-white text-xs font-black uppercase tracking-widest shadow-md ${color}`}>
         {label}
       </div>
-      <span className="text-[10px] font-bold text-slate-900 uppercase tracking-tighter">
-        {score}% Match Probability
+      <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">
+        {score}% Confidence Score
       </span>
     </div>
   );

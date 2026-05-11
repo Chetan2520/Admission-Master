@@ -3,10 +3,9 @@
 import React from "react";
 import { College, Cutoff, calculateProbability } from "@/lib/predictorEngine";
 import { usePredictorContext } from "@/context/PredictorContext";
-import { MapPin, GraduationCap, ChevronRight, Trophy, ArrowUpRight } from "lucide-react";
+import { MapPin, GraduationCap, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 
 export default function CollegeResultCard({ item }: { item: College | Cutoff }) {
   const { rank, category, exam } = usePredictorContext();
@@ -15,105 +14,115 @@ export default function CollegeResultCard({ item }: { item: College | Cutoff }) 
 
   const score = calculateProbability(item, parseInt(rank) || 0, category, exam);
   
-  // Determine if it's a Cutoff or College object to extract college details
   const isCutoff = 'collegeId' in item;
   const college = isCutoff ? (item as Cutoff).collegeId : (item as College);
   const cutoff = isCutoff ? (item as Cutoff) : null;
 
   const getProbabilityTheme = (s: number) => {
-    if (s >= 85) return { stroke: "stroke-emerald-400", text: "text-emerald-600", label: "Safe" };
-    if (s >= 65) return { stroke: "stroke-amber-400", text: "text-amber-600", label: "Moderate" };
-    return { stroke: "stroke-rose-400", text: "text-rose-600", label: "Dream" };
+    if (s >= 85) return { color: "#10b981", label: "Safe" };
+    if (s >= 65) return { color: "#3b82f6", label: "Moderate" };
+    return { color: "#f43f5e", label: "Dream" };
   };
 
   const theme = getProbabilityTheme(score);
 
-  if (!college) return null;
+  // Robust check for college object
+  if (!college || typeof college === 'string') {
+    return (
+      <div className="bg-white border-b border-slate-100 py-3 px-2 text-slate-800 font-semibold text-xs italic">
+        Data processing error: College information not available.
+      </div>
+    );
+  }
+
+  // Use college image if available, fallback to logo, then placeholder
+  const displayImage = (Array.isArray(college.images) && college.images[0]) || college.logo || "/placeholder-college.jpg";
+  const validScore = isNaN(score) ? 0 : score;
 
   return (
-    <div className="group bg-white border-b border-slate-100 hover:bg-slate-50 transition-all duration-200">
-      <div className="max-w-full px-6 py-4 flex items-center gap-6">
+    <div className="bg-white border-b border-slate-100 py-3 px-2 hover:bg-slate-50 transition-colors">
+      <div className="flex flex-col md:flex-row items-center gap-5">
         
-        {/* Compact Logo */}
-        <div className="w-10 h-10 flex-shrink-0 bg-white border border-slate-100 rounded-lg flex items-center justify-center overflow-hidden relative">
-          {college.logo ? (
-            <Image src={college.logo} alt={college.name} fill className="object-contain p-2" />
-          ) : (
-            <div className="text-[10px] font-bold text-slate-300">{college.name[0]}</div>
-          )}
+        {/* Real College Image - Formal Compact */}
+        <div className="w-16 h-12 flex-shrink-0 bg-slate-100 rounded overflow-hidden relative border border-slate-100 shadow-sm">
+          <Image 
+            src={displayImage} 
+            alt={college.name} 
+            fill 
+            className="object-cover" 
+          />
         </div>
 
-        {/* Institutional & Course Info */}
+        {/* Info Area */}
         <div className="flex-1 min-w-0">
-           <div className="flex items-center gap-3 mb-1">
-              <h3 className="text-xs md:text-lg font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+           <div className="flex flex-wrap items-center gap-2 mb-0.5">
+              <h3 className="text-[15px] font-medium text-slate-800 truncate">
                 {college.name}
               </h3>
-              <span className="text-[7px] font-black text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded uppercase tracking-widest whitespace-nowrap">
+              <span className="text-[9px] text-slate-800 font-semibold uppercase tracking-tighter border border-slate-100 px-1.5 rounded bg-white">
                 {college.type}
               </span>
            </div>
            
-           <div className="flex items-center gap-4 text-[9px] font-medium text-slate-500">
-              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 opacity-50" /> {college.location}</span>
+           <div className="flex flex-wrap items-center gap-x-3 text-[11px] text-slate-500 font-normal">
+              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-800 font-semibold" /> {college.location}</span>
               {cutoff && (
-                <span className="flex items-center gap-1 font-bold text-slate-900">
-                  <ChevronRight className="w-3 h-3 text-slate-300" />
-                  {cutoff.course} ({cutoff.branch})
+                <span className="flex items-center gap-1 text-slate-800 font-semibold">
+                  <GraduationCap className="w-3 h-3" />
+                  {cutoff.course} | {cutoff.branch}
                 </span>
               )}
            </div>
         </div>
 
-        {/* Cutoff Insights - Desktop Only */}
-        {cutoff && (
-          <div className="hidden lg:block w-32">
-             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Closing Rank</p>
-             <p className="text-[10px] font-bold text-slate-700">{cutoff.closingRank.toLocaleString()}</p>
-          </div>
-        )}
-
-        {/* Fees */}
-        <div className="hidden md:block w-28">
-           <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Annual Fees</p>
-           <p className="text-[10px] font-bold text-slate-700">{college.averageCourseFees || "N/A"}</p>
-        </div>
-
-        {/* Probability Meter */}
-        <div className="flex items-center gap-4 w-32 justify-end md:justify-start">
-           <div className="relative w-9 h-9 flex-shrink-0">
-              <svg className="w-full h-full -rotate-90">
-                 <circle cx="18" cy="18" r="15" className="stroke-slate-50 fill-none" strokeWidth="3" />
-                 <motion.circle 
-                    cx="18" cy="18" r="15" 
-                    className={`fill-none ${theme.stroke}`} 
-                    strokeWidth="3" 
-                    strokeDasharray="94.2"
-                    initial={{ strokeDashoffset: 94.2 }}
-                    whileInView={{ strokeDashoffset: 94.2 - (94.2 * score) / 100 }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    strokeLinecap="round"
-                 />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                 <span className={`text-[8px] font-black ${theme.text}`}>{score}%</span>
-              </div>
+        {/* Tabular Data */}
+        <div className="flex items-center gap-10">
+           {cutoff && (
+             <div className="min-w-[90px]">
+                <p className="text-[9px] text-slate-800 font-semibold uppercase mb-0.5 ">Closing Rank</p>
+                <p className="text-xs text-slate-700">{cutoff.closingRank.toLocaleString()}</p>
+             </div>
+           )}
+           <div className="min-w-[90px]">
+              <p className="text-[9px] text-slate-800 font-semibold uppercase mb-0.5 ">Annual Fees</p>
+              <p className="text-xs text-slate-700">{college.averageCourseFees || "N/A"}</p>
            </div>
-           <div className="hidden sm:block">
-              <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Match</p>
-              <p className={`text-[9px] font-bold uppercase ${theme.text}`}>{theme.label}</p>
+           
+           {/* Score Circle Indicator */}
+           <div className="flex items-center gap-3 min-w-[110px]">
+              <div className="relative w-8 h-8">
+                 <svg className="w-full h-full -rotate-90">
+                    <circle cx="16" cy="16" r="14" className="stroke-slate-100 fill-none" strokeWidth="3" />
+                    <circle 
+                      cx="16" 
+                      cy="16" 
+                      r="14" 
+                      className="fill-none transition-all duration-700" 
+                      stroke={theme.color} 
+                      strokeWidth="3" 
+                      strokeDasharray="87.9"
+                      strokeDashoffset={87.9 - (87.9 * validScore) / 100}
+                      strokeLinecap="round"
+                    />
+                 </svg>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-slate-600">{validScore}%</span>
+                 </div>
+              </div>
+              <div className="flex flex-col">
+                 <p className="text-[9px] text-slate-800 font-semibold uppercase  leading-none mb-1">Match Score</p>
+                 <p className="text-[11px] font-medium leading-none" style={{color: theme.color}}>{theme.label}</p>
+              </div>
            </div>
         </div>
 
         {/* Action */}
-        <div className="w-12 flex justify-end">
-           <Link 
-             href={`/colleges/${college._id}`}
-             className="w-7 h-7 bg-slate-50 hover:bg-blue-600 hover:text-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 transition-all"
-           >
-             <ArrowUpRight className="w-3.5 h-3.5" />
-           </Link>
-        </div>
+        <Link 
+          href={`/colleges/${college._id}`}
+          className="text-slate-800 font-semibold hover:text-blue-600 transition-colors p-1"
+        >
+          <ArrowUpRight className="w-4 h-4" />
+        </Link>
 
       </div>
     </div>

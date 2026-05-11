@@ -151,7 +151,13 @@ export default function ManageCoursesPage() {
             {isUploading ? "Uploading..." : "Bulk Import"}
             <input type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleBulkImport} />
           </label>
-          <button className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-teal-600/10">
+          <button 
+            onClick={() => {
+              toast("Find a college below and click 'Edit' to manage its courses.");
+              document.getElementById('course-search-input')?.focus();
+            }}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-teal-600/10 active:scale-95"
+          >
             <Plus className="w-4 h-4" /> New Mapping
           </button>
         </div>
@@ -163,9 +169,10 @@ export default function ManageCoursesPage() {
           <div className="relative w-full md:w-96">
             <Search className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
+              id="course-search-input"
               type="text"
               placeholder="Search by college or course..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-medium transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

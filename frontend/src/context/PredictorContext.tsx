@@ -11,27 +11,27 @@ type PredictorFilters = {
 
 type PredictorContextType = {
   exam: string;
-  setExam: (val: string) => void;
+  setExam: React.Dispatch<React.SetStateAction<string>>;
   rank: string;
-  setRank: (val: string) => void;
+  setRank: React.Dispatch<React.SetStateAction<string>>;
   category: string;
-  setCategory: (val: string) => void;
+  setCategory: React.Dispatch<React.SetStateAction<string>>;
   budget: string;
-  setBudget: (val: string) => void;
+  setBudget: React.Dispatch<React.SetStateAction<string>>;
   results: (College | Cutoff)[];
-  setResults: (val: (College | Cutoff)[]) => void;
+  setResults: React.Dispatch<React.SetStateAction<(College | Cutoff)[]>>;
   isLoading: boolean;
-  setIsLoading: (val: boolean) => void;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   hasSearched: boolean;
-  setHasSearched: (val: boolean) => void;
+  setHasSearched: React.Dispatch<React.SetStateAction<boolean>>;
   filters: PredictorFilters;
-  setFilters: (val: PredictorFilters) => void;
+  setFilters: React.Dispatch<React.SetStateAction<PredictorFilters>>;
   sortBy: string;
-  setSortBy: (val: string) => void;
+  setSortBy: React.Dispatch<React.SetStateAction<string>>;
   currentPage: number;
-  setCurrentPage: (val: number) => void;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   totalPages: number;
-  setTotalPages: (val: number) => void;
+  setTotalPages: React.Dispatch<React.SetStateAction<number>>;
 };
 
 const PredictorContext = createContext<PredictorContextType | undefined>(undefined);
@@ -41,7 +41,7 @@ export function PredictorProvider({ children }: { children: ReactNode }) {
   const [rank, setRank] = useState("");
   const [category, setCategory] = useState("General");
   const [budget, setBudget] = useState("any");
-  const [results, setResults] = useState<College[]>([]);
+  const [results, setResults] = useState<(College | Cutoff)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [filters, setFilters] = useState<PredictorFilters>({
