@@ -42,7 +42,7 @@ const uploadColleges = async (req, res) => {
       const state = getVal(item, ["state", "province", "region"]);
       const shortName = getVal(item, ["shortname", "short", "abbreviation", "code"]);
       const type = getVal(item, ["type", "collegetype", "category"]) || "Govt";
-      const nirfRank = getVal(item, ["nirfrank", "nirf", "ranking"]);
+      const nirfRank = getVal(item, ["nirfrank", "nirf", "ranking","nirfRank"]);
       const fees = getVal(item, ["fees", "averagefees", "coursefees", "averagecoursefees"]);
       const website = getVal(item, ["website", "url", "link", "site"]);
       const affiliatedWith = getVal(item, ["affiliatedwith", "university", "affiliation"]);
@@ -489,54 +489,53 @@ const uploadCourses = async (req, res) => {
     let updatedCount = 0;
     let errors = [];
 
+    const normalize = (s) => (s ? s.toString().toLowerCase().trim().replace(/[^a-z0-9]/g, "") : "");
+
     const getVal = (row, keys) => {
       if (!row) return null;
-      const normalize = (s) => (s ? s.toString().toLowerCase().trim().replace(/[^a-z0-9]/g, "") : "");
       const normalizedKeys = keys.map(normalize);
       const foundKey = Object.keys(row).find((k) => normalizedKeys.includes(normalize(k)));
       return foundKey ? row[foundKey] : null;
     };
 
-    const escapeRegex = (string) => {
-      return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, "\\$&");
-    };
-
-    const collegeUpdates = new Map();
+    // 1. Pre-fetch all colleges for robust in-memory matching
+    const allColleges = await College.find({});
+    const collegeLookup = new Map();
+    
+    allColleges.forEach(c => {
+      const n1 = normalize(c.name);
+      const n2 = normalize(c.shortName);
+      if (n1) collegeLookup.set(n1, c);
+      if (n2) collegeLookup.set(n2, c);
+    });
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      console.log(`Processing Row ${i + 2}:`, Object.keys(row));
 
-      const collegeIdentifier = getVal(row, ["college", "collegename", "college_name", "shortname", "college_short_name", "collegeshortname", "name", "institution"]);
+      // Try multiple columns for college identification
+      const collegeNameInRow = getVal(row, ["college_name", "college", "collegename", "name", "institution"]);
+      const collegeShortNameInRow = getVal(row, ["short_name", "shortname", "short", "college_short_name", "collegeshortname"]);
       
-      if (!collegeIdentifier) {
-        console.warn(`Row ${i + 2}: No college identifier found.`);
-        errors.push(`Row ${i + 2}: Missing college name`);
+      const potentialIdentifiers = [collegeNameInRow, collegeShortNameInRow].filter(Boolean);
+      
+      if (potentialIdentifiers.length === 0) {
+        errors.push(`Row ${i + 2}: Missing college name or short name`);
         continue;
       }
 
-      const trimmedCollege = collegeIdentifier.toString().trim();
-      const escapedCollege = escapeRegex(trimmedCollege);
-      const cid = trimmedCollege.toLowerCase();
-
-      if (!collegeUpdates.has(cid)) {
-        const college = await College.findOne({
-          $or: [
-            { name: new RegExp(`^\\s*${escapedCollege}\\s*$`, "i") },
-            { shortName: new RegExp(`^\\s*${escapedCollege}\\s*$`, "i") },
-          ],
-        });
-
-        if (!college) {
-          console.warn(`Row ${i + 2}: College "${trimmedCollege}" NOT found in DB.`);
-          errors.push(`Row ${i + 2}: College "${trimmedCollege}" not found.`);
-          continue;
+      let college = null;
+      for (const iden of potentialIdentifiers) {
+        const normIden = normalize(iden);
+        if (collegeLookup.has(normIden)) {
+          college = collegeLookup.get(normIden);
+          break;
         }
-        console.log(`Row ${i + 2}: Found College "${college.name}"`);
-        collegeUpdates.set(cid, college);
       }
 
-      const college = collegeUpdates.get(cid);
+      if (!college) {
+        errors.push(`Row ${i + 2}: College not found in database (Checked: ${potentialIdentifiers.join(", ")})`);
+        continue;
+      }
 
       // --- NEW FLEXIBLE PARSING LOGIC ---
       
@@ -600,14 +599,16 @@ const uploadCourses = async (req, res) => {
           for (const courseName of dynamicCourses) {
             const branchesRaw = getVal(row, [`${courseName} Branches`, `${courseName} Branch`]);
             const durationsRaw = getVal(row, [`${courseName} Durations`, `${courseName} Duration`, `${courseName} Years`]) || "4 Years";
-            const feesRaw = getVal(row, [`${courseName} Fees`, `${courseName} Average Fees`]) || "N/A";
+            const feesRaw = getVal(row, [`${courseName} Fees`, `${courseName} Average Fees`]);
+            const descRaw = getVal(row, [`${courseName} Description`, `${courseName} Info`]) || "";
 
             if (branchesRaw) {
               recordsToProcess.push({
                 courseName,
                 branches: branchesRaw.toString().split(",").map(s => s.trim()),
                 durations: durationsRaw.toString().split(",").map(s => s.trim()),
-                fees: feesRaw.toString().split(",").map(s => s.trim())
+                fees: (feesRaw !== null && feesRaw !== undefined) ? feesRaw.toString().split(",").map(s => s.trim()) : ["N/A"],
+                descriptions: descRaw.toString().split("|").map(s => s.trim())
               });
             }
           }
@@ -616,19 +617,24 @@ const uploadCourses = async (req, res) => {
           const courseName = getVal(row, ["course", "coursename", "degree", "program", "course_name"]);
           const branchesRaw = getVal(row, ["branch", "branches", "stream", "specialization", "discipline", "branch_name"]) || "General";
           const durationsRaw = getVal(row, ["duration", "durations", "course-duration", "years", "duration_years"]) || "4 Years";
-          const feesRaw = getVal(row, ["fees", "fees-per-year", "average-fees", "course-fees", "fee"]) || "N/A";
+          const feesRaw = getVal(row, ["fees", "fees-per-year", "average-fees", "course-fees", "fee"]);
+          const descriptionRaw = getVal(row, ["description", "branch_description", "details", "info"]) || "";
 
           if (courseName) {
             recordsToProcess.push({
               courseName,
               branches: branchesRaw.toString().split(",").map(s => s.trim()),
               durations: durationsRaw.toString().split(",").map(s => s.trim()),
-              fees: feesRaw.toString().split(",").map(s => s.trim())
+              fees: (feesRaw !== null && feesRaw !== undefined) ? feesRaw.toString().split(",").map(s => s.trim()) : ["N/A"],
+              descriptions: descriptionRaw.toString().split("|").map(s => s.trim())
             });
           }
         }
       }
       
+      if (recordsToProcess.length === 0) {
+        console.log(`Row ${i + 2}: No courses found. Row keys: ${Object.keys(row).join(", ")}`);
+      }
       console.log(`Row ${i + 2}: Found ${recordsToProcess.length} courses to process`);
 
       // 2. Process all identified records for this row
@@ -644,15 +650,17 @@ const uploadCourses = async (req, res) => {
         record.branches.forEach((bName, idx) => {
           if (!bName) return;
           
-          let branch = course.branches.find((b) => b.name.toLowerCase() === bName.toLowerCase());
+          let branch = course.branches.find((b) => b.name.toLowerCase() === bName.toLowerCase().trim());
           const duration = record.durations[idx] || record.durations[0] || "4 Years";
           const fees = record.fees[idx] || record.fees[0] || "N/A";
+          const description = record.descriptions[idx] || record.descriptions[0] || "";
 
           if (branch) {
             branch.duration = duration;
             branch.fees = fees;
+            branch.description = description;
           } else {
-            course.branches.push({ name: bName, duration, fees });
+            course.branches.push({ name: bName.trim(), duration, fees, description });
           }
           updatedCount++;
         });
@@ -660,7 +668,8 @@ const uploadCourses = async (req, res) => {
     }
 
     // Save all modified colleges
-    for (const college of collegeUpdates.values()) {
+    const collegesToSave = Array.from(new Set(allColleges.filter(c => c.isModified())));
+    for (const college of collegesToSave) {
       await college.save();
     }
 
@@ -668,7 +677,7 @@ const uploadCourses = async (req, res) => {
       success: true,
       updatedCount,
       errors: errors.length > 0 ? errors : null,
-      message: `Processed ${updatedCount} course/branch records across ${collegeUpdates.size} colleges.`,
+      message: `Processed ${updatedCount} course/branch records across ${collegesToSave.length} colleges.`,
     });
   } catch (error) {
     console.error("Course Upload Error:", error);
@@ -827,6 +836,24 @@ const deleteAllCutoffs = async (req, res) => {
 };
 
 /**
+ * @desc    Get a single college by ID
+ * @route   GET /api/admin/colleges/:id
+ * @access  Private/Admin
+ */
+const getCollegeById = async (req, res) => {
+  try {
+    const college = await College.findById(req.params.id);
+    if (!college) {
+      return res.status(404).json({ success: false, message: "College not found" });
+    }
+    res.status(200).json({ success: true, data: college });
+  } catch (error) {
+    res.status(500);
+    throw new Error(`Fetch College Error: ${error.message}`);
+  }
+};
+
+/**
  * @desc    Get a single college with all its cutoffs and details (A to Z)
  * @route   GET /api/admin/colleges/:id/full-details
  * @access  Private/Admin
@@ -870,6 +897,7 @@ module.exports = {
   uploadCutoffs,
   createCollege,
   getColleges,
+  getCollegeById,
   createCutoff,
   createBulkCutoffs,
   getCutoffs,
@@ -880,3 +908,4 @@ module.exports = {
   deleteAllCutoffs,
   getCollegeFullDetails,
 };
+

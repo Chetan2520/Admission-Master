@@ -15,7 +15,17 @@ const {
   deleteAllColleges,
   deleteAllCutoffs,
   getCollegeFullDetails,
+  getCollegeById,
 } = require("../controllers/adminController");
+
+
+const {
+  getRanks,
+  createRank,
+  updateRank,
+  deleteRank,
+  bulkUploadRanks
+} = require("../controllers/rankController");
 
 const {
   getExams,
@@ -49,8 +59,12 @@ router.delete("/exams/bulk/delete-all", deleteAllExams);
 router.route("/colleges").post(createCollege).get(getColleges);
 router.delete("/colleges/bulk/delete-all", deleteAllColleges);
 
-router.route("/colleges/:id").patch(updateCollege);
+router
+  .route("/colleges/:id")
+  .get(getCollegeById)
+  .patch(updateCollege);
 router.get("/colleges/:id/full-details", getCollegeFullDetails);
+
 
 router.post("/upload-colleges", upload.single("file"), uploadColleges);
 router.post("/upload-cutoffs", upload.single("file"), uploadCutoffs);
@@ -80,5 +94,18 @@ router.route('/cutoffs')
 
 router.post('/cutoffs/bulk', createBulkCutoffs);
 router.delete('/cutoffs/bulk/delete-all', deleteAllCutoffs);
+
+/**
+ * Rank Management Routes
+ */
+router.route('/ranks')
+  .get(getRanks)
+  .post(createRank);
+
+router.route('/ranks/:id')
+  .patch(updateRank)
+  .delete(deleteRank);
+
+router.post('/ranks/bulk-upload', upload.single('file'), bulkUploadRanks);
 
 module.exports = router;

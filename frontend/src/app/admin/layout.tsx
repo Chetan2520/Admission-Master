@@ -33,6 +33,7 @@ const sidebarLinks = [
   { name: "Manage Courses", href: "/admin/courses", icon: GraduationCap },
   { name: "Manage Exams", href: "/admin/exams", icon: FileEdit },
   { name: "Manage Cut-offs", href: "/admin/cut-offs", icon: BarChart3 },
+  { name: "Manage Rank", href: "/admin/rank", icon: Activity },
   { name: "Seat Matrix", href: "/admin/seat-matrix", icon: Layers },
   { name: "Live Sessions", href: "/admin/sessions", icon: Activity },
   { name: "Content Manager", href: "/admin/content", icon: FileEdit },

@@ -14,10 +14,16 @@ const predictColleges = async (req, res) => {
   }
 
   try {
+    const userRank = parseInt(rank);
     const query = {
-      exam: exam,
+      exam: new RegExp(`^${exam}$`, 'i'),
       category: category,
-      closingRank: { $gte: parseInt(rank) }
+      // Include colleges where user rank is better than closing rank, 
+      // AND those that are slightly out of reach (up to 20% margin) for "Dream" picks
+      $or: [
+        { closingRank: { $gte: userRank } },
+        { closingRank: { $gte: userRank * 0.8 } } // Shows colleges that closed slightly above user rank
+      ]
     };
 
     // If type or state filters are provided, find matching colleges first

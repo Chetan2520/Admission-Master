@@ -83,9 +83,17 @@ export default function CollegeResultCard({ item }: { item: College | Cutoff }) 
                 <p className="text-xs text-slate-700">{cutoff.closingRank.toLocaleString()}</p>
              </div>
            )}
+           <div className="min-w-[70px]">
+              <p className="text-[9px] text-slate-800 font-semibold uppercase mb-0.5 ">Duration</p>
+              <p className="text-xs text-slate-700">
+                {cutoff 
+                  ? (college.courses.find(c => c.name === cutoff.course)?.duration || "2 Years") 
+                  : (college.courses[0]?.duration || "2 Years")}
+              </p>
+           </div>
            <div className="min-w-[90px]">
               <p className="text-[9px] text-slate-800 font-semibold uppercase mb-0.5 ">Annual Fees</p>
-              <p className="text-xs text-slate-700">{college.averageCourseFees || "N/A"}</p>
+              <p className="text-xs text-slate-700">{college.averageCourseFees ? `₹${college.averageCourseFees}` : "N/A"}</p>
            </div>
            
            {/* Score Circle Indicator */}

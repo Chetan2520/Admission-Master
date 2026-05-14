@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { predictColleges } = require('../controllers/predictorController');
+const { getRankPrediction } = require('../controllers/rankController');
 
 /**
  * Predictor Engine Routes
@@ -9,5 +10,8 @@ const { predictColleges } = require('../controllers/predictorController');
 
 // Route to get college predictions
 router.get('/predict', predictColleges);
+
+// Route to predict rank from marks
+router.get('/predict-rank', getRankPrediction);
 
 module.exports = router;

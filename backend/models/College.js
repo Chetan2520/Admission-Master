@@ -26,7 +26,8 @@ const collegeSchema = new mongoose.Schema({
     branches: [{
       name: String,  
       duration: String,
-      fees: String
+      fees: String,
+      description: String
     }]
   }]
 }, { timestamps: true });

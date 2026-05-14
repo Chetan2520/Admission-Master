@@ -123,7 +123,7 @@ export default function CollegeProfilePage({ params }: { params: { id: string } 
     "Overview", 
     "Courses & Fees", 
     "Admission Process", 
-    "Cutoff Trends", 
+    "Entrance Exams", 
     "Placements", 
     "Facilities", 
     "Reviews"
@@ -381,53 +381,38 @@ export default function CollegeProfilePage({ params }: { params: { id: string } 
             </div>
           )}
 
-          {activeTab === "Cutoff Trends" && (
+          {activeTab === "Entrance Exams" && (
             <div className="space-y-8 animate-in fade-in duration-300">
               <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm">
-                <h2 className="text-xl font-bold text-slate-900 mb-6">Cutoff Trends (Last 5 Years)</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-slate-700 font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="px-4 py-4">Category</th>
-                        <th className="px-4 py-4 text-center">2024</th>
-                        <th className="px-4 py-4 text-center">2023</th>
-                        <th className="px-4 py-4 text-center">2022</th>
-                        <th className="px-4 py-4 text-center">2021</th>
-                        <th className="px-4 py-4 text-center">2020</th>
-                        <th className="px-4 py-4 text-right">Trend</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-semibold text-slate-600">
-                      <tr>
-                        <td className="px-4 py-5">GENERAL</td>
-                        <td className="px-4 py-5 text-center">50</td>
-                        <td className="px-4 py-5 text-center">63</td>
-                        <td className="px-4 py-5 text-center">72</td>
-                        <td className="px-4 py-5 text-center">85</td>
-                        <td className="px-4 py-5 text-center">98</td>
-                        <td className="px-4 py-5 text-right text-emerald-600 flex items-center justify-end gap-1"><TrendingUp className="w-4 h-4" /> Easier</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-5">OBC</td>
-                        <td className="px-4 py-5 text-center">118</td>
-                        <td className="px-4 py-5 text-center">145</td>
-                        <td className="px-4 py-5 text-center">168</td>
-                        <td className="px-4 py-5 text-center">195</td>
-                        <td className="px-4 py-5 text-center">220</td>
-                        <td className="px-4 py-5 text-right text-emerald-600 flex items-center justify-end gap-1"><TrendingUp className="w-4 h-4" /> Easier</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-5">SC</td>
-                        <td className="px-4 py-5 text-center">890</td>
-                        <td className="px-4 py-5 text-center">1050</td>
-                        <td className="px-4 py-5 text-center">1200</td>
-                        <td className="px-4 py-5 text-center">1380</td>
-                        <td className="px-4 py-5 text-center">1520</td>
-                        <td className="px-4 py-5 text-right text-emerald-600 flex items-center justify-end gap-1"><TrendingUp className="w-4 h-4" /> Easier</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-5">ST</td>
+                <h2 className="text-xl font-bold text-slate-900 mb-6">Entrance Exams & Eligibility</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Required Exams</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {college.entranceExams?.map((exam, idx) => (
+                        <span key={idx} className="bg-slate-50 text-[#0f76b5] px-3 py-1.5 rounded-lg font-bold border border-slate-100">
+                          {exam}
+                        </span>
+                      )) || <span className="text-slate-400 italic">No exams listed</span>}
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">General Eligibility</h3>
+                    <ul className="space-y-3">
+                      <li className="flex items-start gap-3 text-sm text-slate-600 font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5" />
+                        <span>Completion of 10+2 with relevant subjects</span>
+                      </li>
+                      <li className="flex items-start gap-3 text-sm text-slate-600 font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5" />
+                        <span>Qualifying score in required entrance exams</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
                         <td className="px-4 py-5 text-center">1850</td>
                         <td className="px-4 py-5 text-center">2100</td>
                         <td className="px-4 py-5 text-center">2350</td>

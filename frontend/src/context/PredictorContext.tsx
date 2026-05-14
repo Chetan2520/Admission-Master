@@ -32,6 +32,10 @@ type PredictorContextType = {
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   totalPages: number;
   setTotalPages: React.Dispatch<React.SetStateAction<number>>;
+  marks: string;
+  setMarks: React.Dispatch<React.SetStateAction<string>>;
+  predictionData: any;
+  setPredictionData: React.Dispatch<React.SetStateAction<any>>;
 };
 
 const PredictorContext = createContext<PredictorContextType | undefined>(undefined);
@@ -39,6 +43,7 @@ const PredictorContext = createContext<PredictorContextType | undefined>(undefin
 export function PredictorProvider({ children }: { children: ReactNode }) {
   const [exam, setExam] = useState("NEET UG");
   const [rank, setRank] = useState("");
+  const [marks, setMarks] = useState("");
   const [category, setCategory] = useState("General");
   const [budget, setBudget] = useState("any");
   const [results, setResults] = useState<(College | Cutoff)[]>([]);
@@ -46,18 +51,20 @@ export function PredictorProvider({ children }: { children: ReactNode }) {
   const [hasSearched, setHasSearched] = useState(false);
   const [filters, setFilters] = useState<PredictorFilters>({
     type: [],
-    state: [],
+    state: ["all"],
     course: [],
   });
   const [sortBy, setSortBy] = useState("best_match");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [predictionData, setPredictionData] = useState<any>(null);
 
   return (
     <PredictorContext.Provider
       value={{
         exam, setExam,
         rank, setRank,
+        marks, setMarks,
         category, setCategory,
         budget, setBudget,
         results, setResults,
@@ -66,7 +73,8 @@ export function PredictorProvider({ children }: { children: ReactNode }) {
         filters, setFilters,
         sortBy, setSortBy,
         currentPage, setCurrentPage,
-        totalPages, setTotalPages
+        totalPages, setTotalPages,
+        predictionData, setPredictionData
       }}
     >
       {children}

@@ -34,6 +34,7 @@ export default function EditCollegePage() {
     state: "",
     type: "Govt",
     rating: 0,
+    seats: 0,
     averageCourseFees: "",
     website: "",
     description: "",
@@ -57,6 +58,7 @@ export default function EditCollegePage() {
             state: college.state || "",
             type: college.type || "Govt",
             rating: college.rating || 0,
+            seats: college.seats || 0,
             averageCourseFees: college.averageCourseFees || "",
             website: college.website || "",
             description: college.description || "",
@@ -72,6 +74,7 @@ export default function EditCollegePage() {
         setFetching(false);
       }
     };
+
 
     if (params.id) {
       fetchCollege();
@@ -221,16 +224,21 @@ export default function EditCollegePage() {
                               <input name="shortName" value={formData.shortName} onChange={handleInputChange} type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" />
                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                            <div className="space-y-2">
                               <label className="text-xs font-bold text-slate-700 block">NIRF Ranking</label>
                               <input name="nirfRank" value={formData.nirfRank} onChange={handleInputChange} type="number" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" />
                            </div>
                            <div className="space-y-2">
-                              <label className="text-xs font-bold text-slate-700 block">Average Course Fees</label>
+                              <label className="text-xs font-bold text-slate-700 block">Total Seats</label>
+                              <input name="seats" value={formData.seats} onChange={handleInputChange} type="number" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" />
+                           </div>
+                           <div className="md:col-span-1 space-y-2">
+                              <label className="text-xs font-bold text-slate-700 block">Avg Fees</label>
                               <input name="averageCourseFees" value={formData.averageCourseFees} onChange={handleInputChange} type="text" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" />
                            </div>
                         </div>
+
                         <div className="space-y-2">
                            <label className="text-xs font-bold text-slate-700 block">Website URL</label>
                            <input name="website" value={formData.website} onChange={handleInputChange} type="url" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none" />
